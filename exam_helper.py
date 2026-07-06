@@ -128,8 +128,3 @@ async def main(url: str):
     await asyncio.Event().wait()
 
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python exam_helper_v2.py <exam_url>")
-        sys.exit(1)
-    asyncio.run(main(sys.argv[1]))
