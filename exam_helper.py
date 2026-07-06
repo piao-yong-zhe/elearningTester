@@ -90,6 +90,7 @@ async def fill_answers(page: Page, questions):
 async def main(url: str):
     questions = []
     question_event = asyncio.Event()
+    browser_closed = asyncio.Event()
 
     async def intercept_start_exam(response: Response):
         if "startExam" in response.url or "selectExamInfo" in response.url:
@@ -105,6 +106,7 @@ async def main(url: str):
 
     playwright = await async_playwright().start()
     browser = await playwright.chromium.launch(headless=False)
+    browser.on("disconnected", browser_closed.set)
     context = await browser.new_context()
 
     async def on_new_page(new_page: Page):
@@ -118,13 +120,22 @@ async def main(url: str):
     await page.wait_for_url("**/goExamNew*", timeout=120000)
 
     await question_event.wait()
-
     await asyncio.sleep(2)
     pages = context.pages
     for p in pages:
         await fill_answers(p, questions)
 
     logger.info("All answers attempted. Browser will remain open for review.")
-    await asyncio.Event().wait()
+    try:
+        await asyncio.wait_for(browser_closed.wait(), timeout=30)
+        logger.info("Browser window closed. Stopping script.")
+    except asyncio.TimeoutError:
+        logger.info("No browser close event received within 30s. Exiting anyway.")
+    finally:
+        try:
+            await browser.close()
+        except Exception:
+            pass
+        await playwright.stop()
 
 
