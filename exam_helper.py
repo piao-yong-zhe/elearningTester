@@ -7,8 +7,9 @@ from urllib.parse import urlparse
 
 from playwright.async_api import Page, Response, async_playwright
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.propagate = False
 
 
 class GuiLogHandler(logging.Handler):
@@ -47,6 +48,21 @@ def find_chromium_executable():
                 return str(match)
 
     return None
+
+
+def configure_logger(log_callback=None):
+    for handler in list(logger.handlers):
+        logger.removeHandler(handler)
+        handler.close()
+
+    if log_callback is not None:
+        handler = GuiLogHandler(log_callback)
+    else:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+
+    logger.addHandler(handler)
+    return handler
 
 
 def parse_answer(answer_str: str):
@@ -171,11 +187,7 @@ async def main(url: str, log_callback=None):
     questions = []
     question_event = asyncio.Event()
     browser_closed = asyncio.Event()
-    handler = None
-
-    if log_callback is not None:
-        handler = GuiLogHandler(log_callback)
-        logger.addHandler(handler)
+    handler = configure_logger(log_callback)
 
     async def intercept_start_exam(response: Response):
         if "startExam" in response.url or "selectExamInfo" in response.url:
@@ -218,9 +230,8 @@ async def main(url: str, log_callback=None):
 
     logger.info("All answers attempted. Browser will remain open for review.")
 
-    if handler is not None:
-        logger.removeHandler(handler)
-        handler.close()
+    logger.removeHandler(handler)
+    handler.close()
     
 
 
