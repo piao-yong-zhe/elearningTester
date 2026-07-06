@@ -1,6 +1,8 @@
 import asyncio
 import logging
+import os
 import sys
+from pathlib import Path
 from urllib.parse import urlparse
 
 from playwright.async_api import Page, Response, async_playwright
@@ -23,6 +25,28 @@ class GuiLogHandler(logging.Handler):
             self.callback(msg)
         except Exception:
             pass
+
+
+def find_chromium_executable():
+    candidates = []
+    browser_root = os.getenv("PLAYWRIGHT_BROWSERS_PATH")
+    if browser_root:
+        candidates.append(Path(browser_root))
+
+    local_app_data = os.getenv("LOCALAPPDATA")
+    if local_app_data:
+        candidates.append(Path(local_app_data) / "ms-playwright")
+
+    candidates.append(Path.home() / "AppData" / "Local" / "ms-playwright")
+
+    for base in candidates:
+        if not base or not base.exists():
+            continue
+        for match in base.rglob("chrome.exe"):
+            if "chrome-win64" in str(match) and "chromium" in str(match).lower():
+                return str(match)
+
+    return None
 
 
 def parse_answer(answer_str: str):
@@ -166,7 +190,12 @@ async def main(url: str, log_callback=None):
                 logger.info("Parsed %d questions from %s", len(questions), response.url)
 
     playwright = await async_playwright().start()
-    browser = await playwright.chromium.launch(headless=False)
+    chromium_executable = find_chromium_executable()
+    launch_kwargs = {"headless": False}
+    if chromium_executable:
+        logger.info("Using Chromium executable: %s", chromium_executable)
+        launch_kwargs["executable_path"] = chromium_executable
+    browser = await playwright.chromium.launch(**launch_kwargs)
     browser.on("disconnected", browser_closed.set)
     context = await browser.new_context()
 
