@@ -52,7 +52,7 @@ class ExamGUI(tk.Tk):
 
     def _run_helper(self, url: str):
         try:
-            asyncio.run(run_exam_helper(url))
+            asyncio.run(run_exam_helper(url, log_callback=self.append_log))
         except Exception as exc:
             self.append_log(f"运行失败: {exc}")
         finally:
