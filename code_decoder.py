@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, scrolledtext
 
-from license_codec import verify_license
+from license_codec import verify_license, decode_text
 
 
 class CodeDecoderApp(tk.Tk):
@@ -16,14 +16,14 @@ class CodeDecoderApp(tk.Tk):
         frame = tk.Frame(self)
         frame.pack(fill="both", expand=True, padx=16, pady=16)
 
-        tk.Label(frame, text="待验证文本：", font=(None, 11)).grid(row=0, column=0, sticky="nw", pady=(8, 0))
+        tk.Label(frame, text="待验证文本（加密验证码）：", font=(None, 11)).grid(row=0, column=0, sticky="nw", pady=(8, 0))
         self.token_text = scrolledtext.ScrolledText(frame, width=48, height=6)
         self.token_text.grid(row=0, column=1, sticky="w", pady=(8, 0))
 
         self.decode_button = tk.Button(frame, text="验证", width=14, command=self.decode_token)
         self.decode_button.grid(row=1, column=1, sticky="w", pady=12)
 
-        tk.Label(frame, text="验证结果：", font=(None, 11)).grid(row=2, column=0, sticky="nw", pady=(6, 0))
+        tk.Label(frame, text="解码结果（明文 + 校验）：", font=(None, 11)).grid(row=2, column=0, sticky="nw", pady=(6, 0))
         self.result_text = scrolledtext.ScrolledText(frame, width=48, height=8, state="disabled")
         self.result_text.grid(row=2, column=1, sticky="w", pady=(6, 0))
 
@@ -37,17 +37,25 @@ class CodeDecoderApp(tk.Tk):
             return
 
         try:
+            # first decode to plaintext (e.g. 20260707-EXAM-VALID)
+            try:
+                plain = decode_text(token)
+            except Exception:
+                plain = "<无法解码为明文>"
+
             payload = verify_license(token)
-            self._show_result(payload)
+            self._show_result(payload, plain)
             self.status_label.configure(text="验证成功。", fg="green")
         except Exception as exc:
-            self._show_result({})
+            self._show_result({}, "")
             self.status_label.configure(text="验证失败，请检查验证码是否正确。", fg="red")
             messagebox.showerror("验证失败", str(exc))
 
-    def _show_result(self, payload):
+    def _show_result(self, payload, plain_text: str = ""):
         self.result_text.configure(state="normal")
         self.result_text.delete("1.0", tk.END)
+        if plain_text:
+            self.result_text.insert(tk.END, f"明文: {plain_text}\n\n")
         if payload:
             for key, value in payload.items():
                 self.result_text.insert(tk.END, f"{key}: {value}\n")
