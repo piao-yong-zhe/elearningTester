@@ -35,6 +35,7 @@ class ExamGUI(tk.Tk):
         verify_btn_frame.pack(fill="x", padx=12, pady=8)
         self.verify_button = tk.Button(verify_btn_frame, text="验证", width=12, command=self.verify_license)
         self.verify_button.pack(side="left")
+        tk.Button(verify_btn_frame, text="删除验证", width=12, command=self.delete_binding).pack(side="left", padx=(8, 0))
         tk.Label(verify_btn_frame, textvariable=self.validation_status_var, fg="blue").pack(side="left", padx=(12, 0))
 
         tk.Label(self, text="考试 URL:").pack(anchor="w", padx=12, pady=(8, 4))
@@ -86,6 +87,25 @@ class ExamGUI(tk.Tk):
         except Exception:
             pass
         self._update_validation_state("请先完成验证。", False)
+
+    def delete_binding(self):
+        path = self._get_binding_path()
+        if not path.exists():
+            messagebox.showinfo("提示", "未找到验证记录。")
+            self._update_validation_state("请先完成验证。", False)
+            return
+
+        if not messagebox.askyesno("确认", "确定要删除本机的验证记录吗？"):
+            return
+
+        try:
+            path.unlink()
+            self.verify_code_var.set("")
+            self._update_validation_state("请先完成验证。", False)
+            self.append_log("已删除验证记录。")
+            messagebox.showinfo("已删除", "验证记录已删除，状态已设为未验证。")
+        except Exception as exc:
+            messagebox.showerror("删除失败", str(exc))
 
     def verify_license(self):
         code = self.verify_code_var.get().strip()

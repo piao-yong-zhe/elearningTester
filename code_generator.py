@@ -4,7 +4,7 @@ from tkinter import messagebox
 from license_codec import create_license, validate_date
 
 
-ADMIN_PASSWORD = "admin123"
+ADMIN_PASSWORD = "adm123xyz789"
 
 
 class CodeGeneratorApp(tk.Tk):
